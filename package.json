@@ -1,5 +1,5 @@
 {
-  "name": "weather-agent",
+  "name": "psychologist-agent",
   "version": "1.0.0",
   "main": "index.js",
   "private": true,
@@ -10,7 +10,7 @@
   "keywords": [],
   "author": "",
   "license": "Apache-2.0",
-  "description": "One Agent, one Workflow and one Tool to bring you the weather in your city.",
+  "description": "One Agent, one Workflow to provide supportive mental health guidance and psychological support.",
   "type": "module",
   "dependencies": {
     "@ai-sdk/google": "^3.0.5",
