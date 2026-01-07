@@ -2,7 +2,14 @@ import { createTool } from "@mastra/core/tools";
 import z from "zod";
 import Exa from "exa-js";
 
-export const exa = new Exa(process.env.EXA_API_KEY);
+const apiKey = process.env.EXA_API_KEY;
+if (!apiKey) {
+  throw new Error('EXA_API_KEY environment variable is required');
+}
+
+export const exa = new Exa(apiKey);
+
+const MAX_CONTENT_LENGTH = 500;
 
 export const webSearch = createTool({
   id: "exa-web-search",
@@ -19,17 +26,21 @@ export const webSearch = createTool({
     }),
   ),
   execute: async ({ context }) => {
-    const response = await exa.searchAndContents(context.query, {
-      livecrawl: "always",
-      numResults: 2,
-      text: true,
-    });
+    try {
+      const response = await exa.searchAndContents(context.query, {
+        livecrawl: "always",
+        numResults: 2,
+        text: true,
+      });
 
-    return response.results.map((result) => ({
-      title: result.title,
-      url: result.url,
-      content: (result.text || "").slice(0, 500),
-      publishedDate: result.publishedDate,
-    }));
+      return response.results.map((result) => ({
+        title: result.title,
+        url: result.url,
+        content: (result.text || "").slice(0, MAX_CONTENT_LENGTH),
+        publishedDate: result.publishedDate,
+      }));
+    } catch (error) {
+      throw new Error(`Failed to search with Exa: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 });
