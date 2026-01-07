@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "mastra dev",
-    "index-docs": "tsx src/index-docs.ts"
+    "index-docs": "tsx src/index-docs.ts",
+    "test-rag": "npx tsc && node dist/test-rag.js"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^22.15.29",
     "mastra": "latest",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.3"
   }
 }
