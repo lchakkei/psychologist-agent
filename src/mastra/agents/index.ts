@@ -5,7 +5,8 @@ import { fastembed } from '@mastra/fastembed';
 import { 
   ModerationProcessor,
   SystemPromptScrubber,
-  PIIDetector
+  PIIDetector,
+  BatchPartsProcessor
 } from '@mastra/core/processors';
 import { weatherTool } from '../tools';
 
@@ -33,13 +34,19 @@ export const psychologistAgent = new Agent({
   model: process.env.MODEL || 'openai/gpt-4o',
   
   outputProcessors: [
+    // Batch stream parts first to reduce LLM calls
+    new BatchPartsProcessor({
+      batchSize: 10,
+    }),
     // Ensure AI responses don't contain harmful content
     new ModerationProcessor({
       model: 'poe/google/gemini-2.5-flash-lite',
+      instructions: 'Check if and Avoid the response contains harmful, hateful, harassing, violent, or self-harm content',
       threshold: 0.6,
       strategy: 'block',
       categories: ['hate', 'harassment', 'violence', 'self-harm'],
-      includeScores: true
+      includeScores: true,
+      chunkWindow: 1
     }),
     // Prevent system prompt leakage in AI responses
     new SystemPromptScrubber({
