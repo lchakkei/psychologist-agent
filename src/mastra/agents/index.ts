@@ -20,6 +20,7 @@ export const weatherAgent = new Agent({
       - Keep responses concise but informative
 
       Use the weatherTool to fetch current weather data.
+      You also have access to webSearch for looking up additional information if needed.
 `,
   model: process.env.MODEL || 'openai/gpt-4o',
   tools: {
