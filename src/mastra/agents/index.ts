@@ -4,6 +4,8 @@ import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
 import { weatherTool } from '../tools';
 
+const MASTRA_DB_URL = 'file:../../mastra.db';
+
 export const weatherAgent = new Agent({
   name: 'Weather Agent',
   instructions: `
@@ -21,13 +23,13 @@ export const weatherAgent = new Agent({
   model: process.env.MODEL || 'openai/gpt-4o',
   tools: { weatherTool },
   memory: new Memory({
-    storage: new LibSQLStore({ url: 'file:../../mastra.db' }),
+    storage: new LibSQLStore({ url: MASTRA_DB_URL }),
     options: {
       threads: { generateTitle: true },
       semanticRecall: true,
       workingMemory: { enabled: true },
     },
     embedder: fastembed,
-    vector: new LibSQLVector({ connectionUrl: 'file:../../mastra.db' }),
+    vector: new LibSQLVector({ connectionUrl: MASTRA_DB_URL }),
   }),
 });
