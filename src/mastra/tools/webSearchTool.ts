@@ -1,24 +1,22 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { tavily } from '@tavily/core';
+import { google } from 'googleapis';
 
-interface TavilySearchResult {
+interface GoogleSearchResult {
   title: string;
-  url: string;
-  content: string;
-  score?: number;
+  link: string;
+  snippet: string;
 }
 
-interface TavilySearchResponse {
-  results: TavilySearchResult[];
+interface GoogleSearchResponse {
+  items?: GoogleSearchResult[];
 }
 
 export const webSearchTool = createTool({
   id: 'web-search',
-  description: 'Search the web for current information, news, and answers to questions. Use this when you need up-to-date information or when the user asks about current events, recent developments, or information not in your training data.',
+  description: 'Search the web using Google Search for current information, news, and answers to questions. Use this when you need up-to-date information or when the user asks about current events, recent developments, or information not in your training data.',
   inputSchema: z.object({
     query: z.string().describe('The search query to find information on the web'),
-    searchDepth: z.enum(['basic', 'advanced']).optional().describe('The depth of the search - basic for quick results, advanced for comprehensive research'),
     maxResults: z.number().min(1).max(10).optional().describe('Maximum number of results to return (1-10)'),
   }),
   outputSchema: z.object({
@@ -26,32 +24,39 @@ export const webSearchTool = createTool({
       z.object({
         title: z.string(),
         url: z.string(),
-        content: z.string(),
-        score: z.number().optional(),
+        snippet: z.string(),
       })
     ),
     query: z.string(),
   }),
   execute: async ({ context }) => {
-    const apiKey = process.env.TAVILY_API_KEY;
+    const apiKey = process.env.GOOGLE_API_KEY;
+    const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
     
     if (!apiKey) {
-      throw new Error('TAVILY_API_KEY environment variable is not set');
+      throw new Error('GOOGLE_API_KEY environment variable is not set');
+    }
+    
+    if (!searchEngineId) {
+      throw new Error('GOOGLE_SEARCH_ENGINE_ID environment variable is not set');
     }
 
-    const client = tavily({ apiKey });
+    const customsearch = google.customsearch('v1');
     
-    const response = await client.search(context.query, {
-      searchDepth: context.searchDepth || 'basic',
-      maxResults: context.maxResults || 5,
-    }) as TavilySearchResponse;
+    const response = await customsearch.cse.list({
+      auth: apiKey,
+      cx: searchEngineId,
+      q: context.query,
+      num: context.maxResults || 5,
+    });
+
+    const data = response.data as GoogleSearchResponse;
 
     return {
-      results: response.results.map((result: TavilySearchResult) => ({
-        title: result.title,
-        url: result.url,
-        content: result.content,
-        score: result.score,
+      results: (data.items || []).map((item: GoogleSearchResult) => ({
+        title: item.title,
+        url: item.link,
+        snippet: item.snippet,
       })),
       query: context.query,
     };

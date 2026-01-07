@@ -22,4 +22,5 @@ The Weather Agent template showcases how to:
 ## Environment Variables
 
 - `OPENAI_API_KEY`: Your OpenAI API key. [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-- `TAVILY_API_KEY`: Your Tavily API key for web search functionality. [https://tavily.com/](https://tavily.com/)
+- `GOOGLE_API_KEY`: Your Google API key for Google Custom Search. [https://console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)
+- `GOOGLE_SEARCH_ENGINE_ID`: Your Google Custom Search Engine ID. [https://programmablesearchengine.google.com/](https://programmablesearchengine.google.com/)
