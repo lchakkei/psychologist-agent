@@ -1,5 +1,6 @@
 import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
+import { CloudExporter, DefaultExporter, SensitiveDataFilter, SamplingStrategyType } from '@mastra/core/ai-tracing';
 import { weatherWorkflow } from './workflows';
 import { weatherAgent } from './agents';
 
@@ -11,8 +12,13 @@ export const mastra = new Mastra({
     level: 'info',
   }),
   observability: {
-    default: {
-      enabled: true,
+    configs: {
+      default: {
+        serviceName: 'mastra',
+        sampling: { type: SamplingStrategyType.ALWAYS },
+        processors: [new SensitiveDataFilter()],
+        exporters: [new CloudExporter(), new DefaultExporter()],
+      },
     },
   },
 });

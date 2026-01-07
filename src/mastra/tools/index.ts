@@ -1,6 +1,8 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
+export { webSearchTool } from './webSearchTool';
+
 interface GeocodingResponse {
   results: {
     latitude: number;

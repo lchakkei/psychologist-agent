@@ -2,7 +2,7 @@ import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
-import { weatherTool } from '../tools';
+import { weatherTool, webSearchTool } from '../tools';
 
 const MASTRA_DB_URL = 'file:../../mastra.db';
 
@@ -19,9 +19,10 @@ export const weatherAgent = new Agent({
       - Keep responses concise but informative
 
       Use the weatherTool to fetch current weather data.
+      Use the webSearchTool to find up-to-date information from the web when needed.
 `,
   model: process.env.MODEL || 'openai/gpt-4o',
-  tools: { weatherTool },
+  tools: { weatherTool, webSearchTool },
   memory: new Memory({
     storage: new LibSQLStore({ url: MASTRA_DB_URL }),
     options: {

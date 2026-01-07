@@ -10,6 +10,8 @@ The Weather Agent template showcases how to:
 - Implement weather-related workflows
 - Handle user queries about weather conditions
 - Integrate with OpenAI's API for natural language processing
+- Use web search functionality to find current information
+- Configure AI tracing with observability for monitoring and debugging
 
 ## Setup
 
@@ -20,3 +22,4 @@ The Weather Agent template showcases how to:
 ## Environment Variables
 
 - `OPENAI_API_KEY`: Your OpenAI API key. [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- `TAVILY_API_KEY`: Your Tavily API key for web search functionality. [https://tavily.com/](https://tavily.com/)
