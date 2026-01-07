@@ -218,7 +218,16 @@ export const indexMarkdownTool = createTool({
     documentCount: z.number(),
   }),
   execute: async ({ context }) => {
-    const docsPath = path.resolve(context.docsPath);
+    // Validate and resolve the docs path safely
+    const basePath = process.cwd();
+    const requestedPath = context.docsPath;
+    
+    // Prevent directory traversal by ensuring path is relative and doesn't escape
+    if (requestedPath.includes('..') || path.isAbsolute(requestedPath)) {
+      throw new Error('Invalid docs path: must be a relative path without ".."');
+    }
+    
+    const docsPath = path.join(basePath, requestedPath);
     const documents = await loadMarkdownFiles(docsPath);
     await indexDocuments(documents);
     
