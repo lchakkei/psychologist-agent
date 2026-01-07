@@ -1,4 +1,7 @@
 import { Agent } from '@mastra/core/agent';
+import { Memory } from '@mastra/memory';
+import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
+import { fastembed } from '@mastra/fastembed';
 import { weatherTool } from '../tools';
 
 export const weatherAgent = new Agent({
@@ -17,4 +20,14 @@ export const weatherAgent = new Agent({
 `,
   model: process.env.MODEL || 'openai/gpt-4o',
   tools: { weatherTool },
+  memory: new Memory({
+    storage: new LibSQLStore({ url: 'file:../../mastra.db' }),
+    options: {
+      threads: { generateTitle: true },
+      semanticRecall: true,
+      workingMemory: { enabled: true },
+    },
+    embedder: fastembed,
+    vector: new LibSQLVector({ connectionUrl: 'file:../../mastra.db' }),
+  }),
 });
