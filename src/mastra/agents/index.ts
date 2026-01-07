@@ -3,6 +3,7 @@ import { Memory } from '@mastra/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
 import { weatherTool } from '../tools';
+import { google } from '@ai-sdk/google';
 
 const MASTRA_DB_URL = 'file:../../mastra.db';
 
@@ -21,7 +22,10 @@ export const weatherAgent = new Agent({
       Use the weatherTool to fetch current weather data.
 `,
   model: process.env.MODEL || 'openai/gpt-4o',
-  tools: { weatherTool },
+  tools: {
+    weatherTool,
+    webSearch: google.tools.googleSearch({})
+  },
   memory: new Memory({
     storage: new LibSQLStore({ url: MASTRA_DB_URL }),
     options: {
