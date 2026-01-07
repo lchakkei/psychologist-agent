@@ -2,6 +2,11 @@ import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
+import { 
+  ModerationProcessor,
+  SystemPromptScrubber,
+  PIIDetector
+} from '@mastra/core/processors';
 import { weatherTool } from '../tools';
 
 const MASTRA_DB_URL = 'file:../../mastra.db';
@@ -26,6 +31,33 @@ export const psychologistAgent = new Agent({
       Remember: You are here to support, not to replace professional therapy. Always encourage users to seek professional help for serious mental health concerns.
 `,
   model: process.env.MODEL || 'openai/gpt-4o',
+  
+  outputProcessors: [
+    // Ensure AI responses don't contain harmful content
+    new ModerationProcessor({
+      model: 'poe/google/gemini-2.5-flash-lite',
+      threshold: 0.6,
+      strategy: 'block',
+      categories: ['hate', 'harassment', 'violence', 'self-harm'],
+      includeScores: true
+    }),
+    // Prevent system prompt leakage in AI responses
+    new SystemPromptScrubber({
+      model: 'poe/google/gemini-2.5-flash-lite',
+      strategy: 'redact',
+      redactionMethod: 'placeholder',
+      includeDetections: true
+    }),
+    // Ensure AI doesn't accidentally leak PII in responses
+    new PIIDetector({
+      model: 'poe/google/gemini-2.5-flash-lite',
+      threshold: 0.7,
+      strategy: 'redact',
+      detectionTypes: ['email', 'phone', 'ssn', 'credit-card'],
+      redactionMethod: 'mask'
+    })
+  ],
+  
   tools: {
     weatherTool,
   },
