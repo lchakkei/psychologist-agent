@@ -2,8 +2,7 @@ import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
-import { weatherTool } from '../tools';
-import { google } from '@ai-sdk/google';
+import { weatherTool, webSearch } from '../tools';
 
 const MASTRA_DB_URL = 'file:../../mastra.db';
 
@@ -25,7 +24,7 @@ export const weatherAgent = new Agent({
   model: process.env.MODEL || 'openai/gpt-4o',
   tools: {
     weatherTool,
-    webSearch: google.tools.googleSearch({})
+    webSearch
   },
   memory: new Memory({
     storage: new LibSQLStore({ url: MASTRA_DB_URL }),
@@ -38,3 +37,5 @@ export const weatherAgent = new Agent({
     vector: new LibSQLVector({ connectionUrl: MASTRA_DB_URL }),
   }),
 });
+
+export { searchAgent } from './searchAgent';

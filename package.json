@@ -20,6 +20,7 @@
     "@mastra/libsql": "latest",
     "@mastra/loggers": "latest",
     "@mastra/memory": "^0.15.13",
+    "exa-js": "^2.0.12",
     "zod": "^3.25.76"
   },
   "devDependencies": {
