@@ -7,6 +7,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 
 const MASTRA_DB_URL = 'file:../../mastra.db';
+const MAX_CHUNK_SIZE = 500;
+const DEFAULT_TOP_K = 3;
 
 // Initialize the vector store
 const vectorStore = new LibSQLVector({ connectionUrl: MASTRA_DB_URL });
@@ -77,8 +79,8 @@ function splitIntoChunks(content: string, filename: string): Document[] {
     } else {
       currentChunk += line + '\n';
       
-      // If chunk is getting too large (>500 chars), split it
-      if (currentChunk.length > 500 && line.trim() === '') {
+      // If chunk is getting too large, split it
+      if (currentChunk.length > MAX_CHUNK_SIZE && line.trim() === '') {
         chunks.push({
           id: `${filename}-${chunkIndex}`,
           content: currentChunk.trim(),
@@ -165,7 +167,7 @@ async function indexDocuments(documents: Document[]): Promise<void> {
 }
 
 // Function to query the vector store
-async function queryDocuments(query: string, topK: number = 3): Promise<string> {
+async function queryDocuments(query: string, topK: number = DEFAULT_TOP_K): Promise<string> {
   const indexName = 'psychology-docs';
   
   try {
@@ -218,17 +220,19 @@ export const indexMarkdownTool = createTool({
     documentCount: z.number(),
   }),
   execute: async ({ context }) => {
-    // Validate and resolve the docs path safely
+    // Validate and resolve the docs path safely to prevent directory traversal
     const basePath = process.cwd();
     const requestedPath = context.docsPath;
     
-    // Prevent directory traversal by ensuring path is relative and doesn't escape
-    if (requestedPath.includes('..') || path.isAbsolute(requestedPath)) {
-      throw new Error('Invalid docs path: must be a relative path without ".."');
+    // Normalize and resolve the requested path
+    const resolvedPath = path.resolve(basePath, requestedPath);
+    
+    // Ensure the resolved path is within the base directory
+    if (!resolvedPath.startsWith(basePath)) {
+      throw new Error('Invalid docs path: path must be within the project directory');
     }
     
-    const docsPath = path.join(basePath, requestedPath);
-    const documents = await loadMarkdownFiles(docsPath);
+    const documents = await loadMarkdownFiles(resolvedPath);
     await indexDocuments(documents);
     
     return {
@@ -244,7 +248,7 @@ export const queryMarkdownTool = createTool({
   description: 'Query the indexed markdown documentation using semantic search to find relevant information',
   inputSchema: z.object({
     query: z.string().describe('The question or topic to search for in the documentation'),
-    topK: z.number().optional().default(3).describe('Number of relevant chunks to retrieve'),
+    topK: z.number().optional().default(DEFAULT_TOP_K).describe('Number of relevant chunks to retrieve'),
   }),
   outputSchema: z.object({
     results: z.string(),
