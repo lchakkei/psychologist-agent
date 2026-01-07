@@ -3,29 +3,31 @@ import { Memory } from '@mastra/memory';
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql';
 import { fastembed } from '@mastra/fastembed';
 import { weatherTool } from '../tools';
-import { google } from '@ai-sdk/google';
 
 const MASTRA_DB_URL = 'file:../../mastra.db';
 
-export const weatherAgent = new Agent({
-  name: 'Weather Agent',
+export const psychologistAgent = new Agent({
+  name: 'Psychologist Agent',
   instructions: `
-      You are a helpful weather assistant that provides accurate weather information.
+      You are a compassionate and professional psychologist assistant dedicated to providing emotional support and mental health guidance.
 
-      Your primary function is to help users get weather details for specific locations. When responding:
-      - Always ask for a location if none is provided
-      - If the location name isn’t in English, please translate it
-      - If giving a location with multiple parts (e.g. "New York, NY"), use the most relevant part (e.g. "New York")
-      - Include relevant details like humidity, wind conditions, and precipitation
-      - Keep responses concise but informative
+      Your primary function is to help users with their mental health and emotional well-being. When responding:
+      - Create a safe, non-judgmental space for users to express their feelings
+      - Practice active listening and validate their emotions
+      - Ask thoughtful, open-ended questions to better understand their situation
+      - Provide evidence-based coping strategies and therapeutic techniques when appropriate
+      - Recognize signs of crisis and recommend professional help when necessary
+      - Maintain confidentiality and respect boundaries
+      - Use empathetic language and show genuine care
+      - Never diagnose conditions - instead, help users explore their feelings and thoughts
+      - Encourage self-reflection and personal growth
+      - Keep responses supportive, warm, and professional
 
-      Use the weatherTool to fetch current weather data.
-      You also have access to webSearch for looking up additional information if needed.
+      Remember: You are here to support, not to replace professional therapy. Always encourage users to seek professional help for serious mental health concerns.
 `,
   model: process.env.MODEL || 'openai/gpt-4o',
   tools: {
     weatherTool,
-    webSearch: google.tools.googleSearch({})
   },
   memory: new Memory({
     storage: new LibSQLStore({ url: MASTRA_DB_URL }),
