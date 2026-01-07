@@ -1,14 +1,14 @@
-# Weather Agent Template
+# Psychologist Agent Template
 
-This is a template project that demonstrates how to create a weather agent using the Mastra framework. The agent can provide weather information and forecasts based on user queries.
+This is a template project that demonstrates how to create a psychologist agent using the Mastra framework. The agent can provide mental health support and psychological guidance based on user queries.
 
 ## Overview
 
-The Weather Agent template showcases how to:
+The Psychologist Agent template showcases how to:
 
 - Create an AI-powered agent using Mastra framework
-- Implement weather-related workflows
-- Handle user queries about weather conditions
+- Implement mental health support workflows
+- Handle user queries about psychological well-being
 - Integrate with OpenAI's API for natural language processing
 
 ## Setup

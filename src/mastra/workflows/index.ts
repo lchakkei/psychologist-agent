@@ -3,151 +3,114 @@ import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { z } from 'zod';
 
 const agent = new Agent({
-  name: 'Weather Agent',
+  name: 'Psychologist Agent',
   model: process.env.MODEL || 'openai/gpt-4o',
   instructions: `
-        You are a local activities and travel expert who excels at weather-based planning. Analyze the weather data and provide practical activity recommendations.
+        You are an empathetic psychological support specialist who excels at providing personalized mental health guidance. Analyze the concern data and provide practical, evidence-based recommendations.
 
-        For each day in the forecast, structure your response exactly as follows:
+        For each concern, structure your response exactly as follows:
 
-        📅 [Day, Month Date, Year]
+        🧠 CONCERN ANALYSIS
         ═══════════════════════════
+        
+        📋 OVERVIEW
+        • Category: [category]
+        • Severity: [severity level]
+        • Support Level: [recommended support type]
 
-        🌡️ WEATHER SUMMARY
-        • Conditions: [brief description]
-        • Temperature: [X°C/Y°F to A°C/B°F]
-        • Precipitation: [X% chance]
+        💡 UNDERSTANDING YOUR FEELINGS
+        [Provide validation and explanation of what they might be experiencing]
 
-        🌅 MORNING ACTIVITIES
-        Outdoor:
-        • [Activity Name] - [Brief description including specific location/route]
-          Best timing: [specific time range]
-          Note: [relevant weather consideration]
+        🛠️ RECOMMENDED TECHNIQUES
+        1. [Technique Name]
+           • Description: [how to do it]
+           • When to use: [best timing]
+           • Why it helps: [explanation]
 
-        🌞 AFTERNOON ACTIVITIES
-        Outdoor:
-        • [Activity Name] - [Brief description including specific location/route]
-          Best timing: [specific time range]
-          Note: [relevant weather consideration]
+        2. [Technique Name]
+           • Description: [how to do it]
+           • When to use: [best timing]
+           • Why it helps: [explanation]
 
-        🏠 INDOOR ALTERNATIVES
-        • [Activity Name] - [Brief description including specific venue]
-          Ideal for: [weather condition that would trigger this alternative]
+        🎯 IMMEDIATE ACTION STEPS
+        1. [Step 1] - [brief explanation]
+        2. [Step 2] - [brief explanation]
+        3. [Step 3] - [brief explanation]
 
-        ⚠️ SPECIAL CONSIDERATIONS
-        • [Any relevant weather warnings, UV index, wind conditions, etc.]
+        📞 PROFESSIONAL SUPPORT
+        [Guidance on when and how to seek professional help, including crisis resources if applicable]
+
+        ⚠️ IMPORTANT REMINDERS
+        • You are not alone in this
+        • These feelings are valid and common
+        • Professional help is available and effective
+        • Crisis support: 988 Lifeline (US), local emergency services
 
         Guidelines:
-        - Suggest 2-3 time-specific outdoor activities per day
-        - Include 1-2 indoor backup options
-        - For precipitation >50%, lead with indoor activities
-        - All activities must be specific to the location
-        - Include specific venues, trails, or locations
-        - Consider activity intensity based on temperature
-        - Keep descriptions concise but informative
+        - Always maintain an empathetic, non-judgmental tone
+        - Provide 2-3 specific, actionable techniques
+        - Include 3-4 immediate steps they can take right now
+        - Emphasize professional help for moderate to severe concerns
+        - Include crisis resources for high-severity concerns
+        - Keep language clear, supportive, and accessible
 
         Maintain this exact formatting for consistency, using the emoji and section headers as shown.
       `,
 });
 
-const forecastSchema = z.object({
-  date: z.string(),
-  maxTemp: z.number(),
-  minTemp: z.number(),
-  precipitationChance: z.number(),
-  condition: z.string(),
-  location: z.string(),
+const concernSchema = z.object({
+  concern: z.string(),
+  severity: z.string(),
+  category: z.string(),
+  supportLevel: z.string(),
+  techniques: z.array(z.string()),
+  immediateSteps: z.array(z.string()),
 });
 
-function getWeatherCondition(code: number): string {
-  const conditions: Record<number, string> = {
-    0: 'Clear sky',
-    1: 'Mainly clear',
-    2: 'Partly cloudy',
-    3: 'Overcast',
-    45: 'Foggy',
-    48: 'Depositing rime fog',
-    51: 'Light drizzle',
-    53: 'Moderate drizzle',
-    55: 'Dense drizzle',
-    61: 'Slight rain',
-    63: 'Moderate rain',
-    65: 'Heavy rain',
-    71: 'Slight snow fall',
-    73: 'Moderate snow fall',
-    75: 'Heavy snow fall',
-    95: 'Thunderstorm',
-  };
-  return conditions[code] || 'Unknown';
-}
-
-const fetchWeather = createStep({
-  id: 'fetch-weather',
-  description: 'Fetches weather forecast for a given city',
+const analyzeConcern = createStep({
+  id: 'analyze-concern',
+  description: 'Analyzes a mental health concern and categorizes it',
   inputSchema: z.object({
-    city: z.string().describe('The city to get the weather for'),
+    concern: z.string().describe('The mental health concern to analyze'),
   }),
-  outputSchema: forecastSchema,
+  outputSchema: concernSchema,
   execute: async ({ inputData }) => {
     if (!inputData) {
       throw new Error('Input data not found');
     }
 
-    const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(inputData.city)}&count=1`;
-    const geocodingResponse = await fetch(geocodingUrl);
-    const geocodingData = (await geocodingResponse.json()) as {
-      results: { latitude: number; longitude: number; name: string }[];
+    // Simple concern analysis logic (matching the psychologistTool)
+    const category = categorizeConcern(inputData.concern.toLowerCase());
+    const severity = assessSeverity(inputData.concern.toLowerCase());
+    const supportData = getSupportData(category, severity);
+
+    return {
+      concern: inputData.concern,
+      severity: severity,
+      category: category,
+      supportLevel: supportData.supportLevel,
+      techniques: supportData.techniques,
+      immediateSteps: supportData.immediateSteps,
     };
-
-    if (!geocodingData.results?.[0]) {
-      throw new Error(`Location '${inputData.city}' not found`);
-    }
-
-    const { latitude, longitude, name } = geocodingData.results[0];
-
-    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=precipitation,weathercode&timezone=auto,&hourly=precipitation_probability,temperature_2m`;
-    const response = await fetch(weatherUrl);
-    const data = (await response.json()) as {
-      current: {
-        time: string;
-        precipitation: number;
-        weathercode: number;
-      };
-      hourly: {
-        precipitation_probability: number[];
-        temperature_2m: number[];
-      };
-    };
-
-    const forecast = {
-      date: new Date().toISOString(),
-      maxTemp: Math.max(...data.hourly.temperature_2m),
-      minTemp: Math.min(...data.hourly.temperature_2m),
-      condition: getWeatherCondition(data.current.weathercode),
-      precipitationChance: data.hourly.precipitation_probability.reduce((acc, curr) => Math.max(acc, curr), 0),
-      location: inputData.city,
-    };
-
-    return forecast;
   },
 });
 
-const planActivities = createStep({
-  id: 'plan-activities',
-  description: 'Suggests activities based on weather conditions',
-  inputSchema: forecastSchema,
+const provideGuidance = createStep({
+  id: 'provide-guidance',
+  description: 'Provides personalized psychological guidance based on the concern analysis',
+  inputSchema: concernSchema,
   outputSchema: z.object({
-    activities: z.string(),
+    guidance: z.string(),
   }),
   execute: async ({ inputData }) => {
-    const forecast = inputData;
+    const analysis = inputData;
 
-    if (!forecast) {
-      throw new Error('Forecast data not found');
+    if (!analysis) {
+      throw new Error('Analysis data not found');
     }
 
-    const prompt = `Based on the following weather forecast for ${forecast.location}, suggest appropriate activities:
-      ${JSON.stringify(forecast, null, 2)}
+    const prompt = `Based on the following mental health concern analysis, provide comprehensive, empathetic guidance:
+      ${JSON.stringify(analysis, null, 2)}
       `;
 
     const response = await agent.stream([
@@ -157,31 +120,144 @@ const planActivities = createStep({
       },
     ]);
 
-    let activitiesText = '';
+    let guidanceText = '';
 
     for await (const chunk of response.textStream) {
       process.stdout.write(chunk);
-      activitiesText += chunk;
+      guidanceText += chunk;
     }
 
     return {
-      activities: activitiesText,
+      guidance: guidanceText,
     };
   },
 });
 
-const weatherWorkflow = createWorkflow({
-  id: 'weather-workflow',
+const psychologistWorkflow = createWorkflow({
+  id: 'psychologist-workflow',
   inputSchema: z.object({
-    city: z.string().describe('The city to get the weather for'),
+    concern: z.string().describe('The mental health concern to address'),
   }),
   outputSchema: z.object({
-    activities: z.string(),
+    guidance: z.string(),
   }),
 })
-  .then(fetchWeather)
-  .then(planActivities);
+  .then(analyzeConcern)
+  .then(provideGuidance);
 
-weatherWorkflow.commit();
+psychologistWorkflow.commit();
 
-export { weatherWorkflow };
+export { psychologistWorkflow };
+
+// Helper functions (matching the tool's logic)
+function categorizeConcern(concern: string): string {
+  const categories: Record<string, string[]> = {
+    'Anxiety': ['anxiety', 'anxious', 'worry', 'nervous', 'panic', 'fear', 'stressed'],
+    'Depression': ['depression', 'depressed', 'sad', 'hopeless', 'empty', 'worthless'],
+    'Stress': ['stress', 'overwhelmed', 'pressure', 'burnout', 'exhausted'],
+    'Relationships': ['relationship', 'partner', 'family', 'friend', 'conflict', 'communication'],
+    'Self-esteem': ['self-esteem', 'confidence', 'worth', 'inadequate', 'insecure'],
+    'Sleep': ['sleep', 'insomnia', 'tired', 'fatigue', 'rest'],
+    'Grief': ['grief', 'loss', 'mourning', 'bereavement', 'death'],
+    'Anger': ['anger', 'angry', 'rage', 'frustrated', 'irritable'],
+  };
+
+  for (const [category, keywords] of Object.entries(categories)) {
+    if (keywords.some(keyword => concern.includes(keyword))) {
+      return category;
+    }
+  }
+  return 'General Well-being';
+}
+
+function assessSeverity(concern: string): string {
+  const highSeverityKeywords = ['suicide', 'kill myself', 'end it all', 'self-harm', 'hurt myself', 'crisis'];
+  const moderateSeverityKeywords = ['can\'t cope', 'unbearable', 'desperate', 'severe', 'terrible'];
+  
+  if (highSeverityKeywords.some(keyword => concern.includes(keyword))) {
+    return 'High - Immediate professional help recommended';
+  } else if (moderateSeverityKeywords.some(keyword => concern.includes(keyword))) {
+    return 'Moderate - Consider professional support';
+  }
+  return 'Mild - Self-help strategies may be beneficial';
+}
+
+function getSupportData(category: string, severity: string): {
+  supportLevel: string;
+  techniques: string[];
+  immediateSteps: string[];
+} {
+  const supportStrategies: Record<string, {
+    supportLevel: string;
+    techniques: string[];
+    immediateSteps: string[];
+  }> = {
+    'Anxiety': {
+      supportLevel: 'Cognitive Behavioral Therapy (CBT) and relaxation techniques',
+      techniques: [
+        'Deep breathing exercises (4-7-8 technique)',
+        'Progressive muscle relaxation',
+        'Mindfulness meditation',
+        'Grounding techniques (5-4-3-2-1 method)',
+        'Cognitive restructuring'
+      ],
+      immediateSteps: [
+        'Take slow, deep breaths',
+        'Name what you\'re feeling without judgment',
+        'Practice the 5-4-3-2-1 grounding technique',
+        'Remove yourself from triggering situations if possible'
+      ]
+    },
+    'Depression': {
+      supportLevel: 'Professional therapy and possible medication consultation',
+      techniques: [
+        'Behavioral activation',
+        'Journaling thoughts and feelings',
+        'Regular physical exercise',
+        'Social connection maintenance',
+        'Sleep hygiene improvement'
+      ],
+      immediateSteps: [
+        'Reach out to a trusted friend or family member',
+        'Engage in one small pleasurable activity',
+        'Get outside for fresh air and sunlight',
+        'Maintain basic self-care routines'
+      ]
+    },
+    'Stress': {
+      supportLevel: 'Stress management techniques and lifestyle adjustments',
+      techniques: [
+        'Time management and prioritization',
+        'Regular breaks and boundary setting',
+        'Physical exercise',
+        'Relaxation techniques',
+        'Problem-solving strategies'
+      ],
+      immediateSteps: [
+        'List your priorities and delegate when possible',
+        'Take a 10-minute break',
+        'Practice deep breathing',
+        'Identify one thing you can control right now'
+      ]
+    },
+  };
+
+  const defaultSupport = {
+    supportLevel: 'General mental health support and self-care',
+    techniques: [
+      'Regular self-reflection',
+      'Maintaining healthy routines',
+      'Social connection',
+      'Physical activity',
+      'Mindfulness practice'
+    ],
+    immediateSteps: [
+      'Take a moment to check in with yourself',
+      'Practice one self-care activity',
+      'Reach out to someone you trust',
+      'Write down your thoughts and feelings'
+    ]
+  };
+
+  return supportStrategies[category] || defaultSupport;
+}

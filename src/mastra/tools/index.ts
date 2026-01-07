@@ -1,102 +1,240 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-interface GeocodingResponse {
-  results: {
-    latitude: number;
-    longitude: number;
-    name: string;
-  }[];
-}
-interface WeatherResponse {
-  current: {
-    time: string;
-    temperature_2m: number;
-    apparent_temperature: number;
-    relative_humidity_2m: number;
-    wind_speed_10m: number;
-    wind_gusts_10m: number;
-    weather_code: number;
-  };
+interface MentalHealthResponse {
+  concern: string;
+  severity: string;
+  category: string;
+  supportLevel: string;
+  techniques: string[];
+  immediateSteps: string[];
 }
 
-export const weatherTool = createTool({
-  id: 'get-weather',
-  description: 'Get current weather for a location',
+export const psychologistTool = createTool({
+  id: 'get-mental-health-support',
+  description: 'Get mental health support and guidance for a specific concern',
   inputSchema: z.object({
-    location: z.string().describe('City name'),
+    concern: z.string().describe('The mental health concern or issue'),
   }),
   outputSchema: z.object({
-    temperature: z.number(),
-    feelsLike: z.number(),
-    humidity: z.number(),
-    windSpeed: z.number(),
-    windGust: z.number(),
-    conditions: z.string(),
-    location: z.string(),
+    concern: z.string(),
+    severity: z.string(),
+    category: z.string(),
+    supportLevel: z.string(),
+    techniques: z.array(z.string()),
+    immediateSteps: z.array(z.string()),
   }),
   execute: async ({ context }) => {
-    return await getWeather(context.location);
+    return await getMentalHealthSupport(context.concern);
   },
 });
 
-const getWeather = async (location: string) => {
-  const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1`;
-  const geocodingResponse = await fetch(geocodingUrl);
-  const geocodingData = (await geocodingResponse.json()) as GeocodingResponse;
-
-  if (!geocodingData.results?.[0]) {
-    throw new Error(`Location '${location}' not found`);
-  }
-
-  const { latitude, longitude, name } = geocodingData.results[0];
-
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,weather_code`;
-
-  const response = await fetch(weatherUrl);
-  const data = (await response.json()) as WeatherResponse;
+const getMentalHealthSupport = async (concern: string): Promise<MentalHealthResponse> => {
+  // Analyze the concern and categorize it
+  const category = categorizeConcern(concern.toLowerCase());
+  const severity = assessSeverity(concern.toLowerCase());
+  
+  // Get appropriate support level and techniques based on category
+  const supportData = getSupportData(category, severity);
 
   return {
-    temperature: data.current.temperature_2m,
-    feelsLike: data.current.apparent_temperature,
-    humidity: data.current.relative_humidity_2m,
-    windSpeed: data.current.wind_speed_10m,
-    windGust: data.current.wind_gusts_10m,
-    conditions: getWeatherCondition(data.current.weather_code),
-    location: name,
+    concern: concern,
+    severity: severity,
+    category: category,
+    supportLevel: supportData.supportLevel,
+    techniques: supportData.techniques,
+    immediateSteps: supportData.immediateSteps,
   };
 };
 
-function getWeatherCondition(code: number): string {
-  const conditions: Record<number, string> = {
-    0: 'Clear sky',
-    1: 'Mainly clear',
-    2: 'Partly cloudy',
-    3: 'Overcast',
-    45: 'Foggy',
-    48: 'Depositing rime fog',
-    51: 'Light drizzle',
-    53: 'Moderate drizzle',
-    55: 'Dense drizzle',
-    56: 'Light freezing drizzle',
-    57: 'Dense freezing drizzle',
-    61: 'Slight rain',
-    63: 'Moderate rain',
-    65: 'Heavy rain',
-    66: 'Light freezing rain',
-    67: 'Heavy freezing rain',
-    71: 'Slight snow fall',
-    73: 'Moderate snow fall',
-    75: 'Heavy snow fall',
-    77: 'Snow grains',
-    80: 'Slight rain showers',
-    81: 'Moderate rain showers',
-    82: 'Violent rain showers',
-    85: 'Slight snow showers',
-    86: 'Heavy snow showers',
-    95: 'Thunderstorm',
-    96: 'Thunderstorm with slight hail',
-    99: 'Thunderstorm with heavy hail',
+function categorizeConcern(concern: string): string {
+  const categories: Record<string, string[]> = {
+    'Anxiety': ['anxiety', 'anxious', 'worry', 'nervous', 'panic', 'fear', 'stressed'],
+    'Depression': ['depression', 'depressed', 'sad', 'hopeless', 'empty', 'worthless'],
+    'Stress': ['stress', 'overwhelmed', 'pressure', 'burnout', 'exhausted'],
+    'Relationships': ['relationship', 'partner', 'family', 'friend', 'conflict', 'communication'],
+    'Self-esteem': ['self-esteem', 'confidence', 'worth', 'inadequate', 'insecure'],
+    'Sleep': ['sleep', 'insomnia', 'tired', 'fatigue', 'rest'],
+    'Grief': ['grief', 'loss', 'mourning', 'bereavement', 'death'],
+    'Anger': ['anger', 'angry', 'rage', 'frustrated', 'irritable'],
   };
-  return conditions[code] || 'Unknown';
+
+  for (const [category, keywords] of Object.entries(categories)) {
+    if (keywords.some(keyword => concern.includes(keyword))) {
+      return category;
+    }
+  }
+  return 'General Well-being';
+}
+
+function assessSeverity(concern: string): string {
+  const highSeverityKeywords = ['suicide', 'kill myself', 'end it all', 'self-harm', 'hurt myself', 'crisis'];
+  const moderateSeverityKeywords = ['can\'t cope', 'unbearable', 'desperate', 'severe', 'terrible'];
+  
+  if (highSeverityKeywords.some(keyword => concern.includes(keyword))) {
+    return 'High - Immediate professional help recommended';
+  } else if (moderateSeverityKeywords.some(keyword => concern.includes(keyword))) {
+    return 'Moderate - Consider professional support';
+  }
+  return 'Mild - Self-help strategies may be beneficial';
+}
+
+function getSupportData(category: string, severity: string): {
+  supportLevel: string;
+  techniques: string[];
+  immediateSteps: string[];
+} {
+  const supportStrategies: Record<string, {
+    supportLevel: string;
+    techniques: string[];
+    immediateSteps: string[];
+  }> = {
+    'Anxiety': {
+      supportLevel: 'Cognitive Behavioral Therapy (CBT) and relaxation techniques',
+      techniques: [
+        'Deep breathing exercises (4-7-8 technique)',
+        'Progressive muscle relaxation',
+        'Mindfulness meditation',
+        'Grounding techniques (5-4-3-2-1 method)',
+        'Cognitive restructuring'
+      ],
+      immediateSteps: [
+        'Take slow, deep breaths',
+        'Name what you\'re feeling without judgment',
+        'Practice the 5-4-3-2-1 grounding technique',
+        'Remove yourself from triggering situations if possible'
+      ]
+    },
+    'Depression': {
+      supportLevel: 'Professional therapy and possible medication consultation',
+      techniques: [
+        'Behavioral activation',
+        'Journaling thoughts and feelings',
+        'Regular physical exercise',
+        'Social connection maintenance',
+        'Sleep hygiene improvement'
+      ],
+      immediateSteps: [
+        'Reach out to a trusted friend or family member',
+        'Engage in one small pleasurable activity',
+        'Get outside for fresh air and sunlight',
+        'Maintain basic self-care routines'
+      ]
+    },
+    'Stress': {
+      supportLevel: 'Stress management techniques and lifestyle adjustments',
+      techniques: [
+        'Time management and prioritization',
+        'Regular breaks and boundary setting',
+        'Physical exercise',
+        'Relaxation techniques',
+        'Problem-solving strategies'
+      ],
+      immediateSteps: [
+        'List your priorities and delegate when possible',
+        'Take a 10-minute break',
+        'Practice deep breathing',
+        'Identify one thing you can control right now'
+      ]
+    },
+    'Relationships': {
+      supportLevel: 'Communication skills and couples/family therapy if needed',
+      techniques: [
+        'Active listening practice',
+        'Using "I" statements',
+        'Setting healthy boundaries',
+        'Conflict resolution strategies',
+        'Empathy building exercises'
+      ],
+      immediateSteps: [
+        'Take time to cool down before discussing issues',
+        'Listen to understand, not to respond',
+        'Express your feelings without blame',
+        'Consider the other person\'s perspective'
+      ]
+    },
+    'Self-esteem': {
+      supportLevel: 'Self-compassion practices and positive psychology techniques',
+      techniques: [
+        'Positive self-talk and affirmations',
+        'Identifying and challenging negative beliefs',
+        'Celebrating small wins',
+        'Self-compassion exercises',
+        'Values clarification'
+      ],
+      immediateSteps: [
+        'Write down three things you did well today',
+        'Challenge one negative thought with evidence',
+        'Treat yourself as you would a good friend',
+        'Practice one act of self-care'
+      ]
+    },
+    'Sleep': {
+      supportLevel: 'Sleep hygiene improvement and possible medical consultation',
+      techniques: [
+        'Consistent sleep schedule',
+        'Bedtime routine development',
+        'Screen time reduction before bed',
+        'Sleep environment optimization',
+        'Relaxation before sleep'
+      ],
+      immediateSteps: [
+        'Set a consistent bedtime',
+        'Avoid screens 1 hour before bed',
+        'Keep bedroom cool and dark',
+        'Practice relaxation techniques'
+      ]
+    },
+    'Grief': {
+      supportLevel: 'Grief counseling and support groups',
+      techniques: [
+        'Allow yourself to feel emotions',
+        'Create meaningful rituals',
+        'Connect with supportive others',
+        'Self-care during grief',
+        'Journaling memories'
+      ],
+      immediateSteps: [
+        'Acknowledge your feelings are valid',
+        'Reach out to supportive people',
+        'Take care of basic needs',
+        'Be patient with yourself'
+      ]
+    },
+    'Anger': {
+      supportLevel: 'Anger management therapy and emotional regulation',
+      techniques: [
+        'Identifying anger triggers',
+        'Time-out strategies',
+        'Relaxation and breathing exercises',
+        'Communication skills',
+        'Problem-solving approaches'
+      ],
+      immediateSteps: [
+        'Take a time-out to cool down',
+        'Practice deep breathing',
+        'Identify what triggered the anger',
+        'Express feelings calmly when ready'
+      ]
+    },
+  };
+
+  const defaultSupport = {
+    supportLevel: 'General mental health support and self-care',
+    techniques: [
+      'Regular self-reflection',
+      'Maintaining healthy routines',
+      'Social connection',
+      'Physical activity',
+      'Mindfulness practice'
+    ],
+    immediateSteps: [
+      'Take a moment to check in with yourself',
+      'Practice one self-care activity',
+      'Reach out to someone you trust',
+      'Write down your thoughts and feelings'
+    ]
+  };
+
+  return supportStrategies[category] || defaultSupport;
 }
