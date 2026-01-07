@@ -40,6 +40,8 @@ export const weatherTool = createTool({
   },
 });
 
+export { indexMarkdownTool, queryMarkdownTool } from './markdown-rag';
+
 const getWeather = async (location: string) => {
   const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1`;
   const geocodingResponse = await fetch(geocodingUrl);
